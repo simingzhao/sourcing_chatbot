@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { BotResponse } from '@/lib/types';
 import { handlePillClick, validateUserInput } from '@/lib/chat-utils';
 import { processUploadedFiles } from '@/lib/file-utils';
@@ -12,12 +13,15 @@ interface UploadedFile {
 }
 
 export default function SourcingChatbot() {
+  const searchParams = useSearchParams();
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string | BotResponse }>>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId] = useState('chat-' + Date.now());
   const [uploadedFiles, setUploadedFiles] = useState<{ images: string[]; files: UploadedFile[] }>({ images: [], files: [] });
+  const [hasInitialized, setHasInitialized] = useState(false);
   const chatBodyRef = useRef<HTMLDivElement>(null);
+  const isSendingRef = useRef(false);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -26,8 +30,12 @@ export default function SourcingChatbot() {
     }
   }, [messages]);
 
-  const sendMessage = async (message: string) => {
+  const sendMessage = useCallback(async (message: string) => {
     if (!message.trim()) return;
+    
+    // Prevent duplicate sends
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
 
     // Validate input
     const validation = validateUserInput({ 
@@ -38,6 +46,7 @@ export default function SourcingChatbot() {
     
     if (!validation.valid) {
       alert(validation.error);
+      isSendingRef.current = false;
       return;
     }
 
@@ -77,8 +86,9 @@ export default function SourcingChatbot() {
       }]);
     } finally {
       setIsLoading(false);
+      isSendingRef.current = false;
     }
-  };
+  }, [conversationId, uploadedFiles]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -120,6 +130,15 @@ export default function SourcingChatbot() {
       sendMessage(inputValue);
     }
   };
+
+  // Handle query parameter on component mount
+  useEffect(() => {
+    const query = searchParams.get('query');
+    if (query && !hasInitialized && !isSendingRef.current) {
+      setHasInitialized(true);
+      sendMessage(query);
+    }
+  }, [searchParams, hasInitialized, sendMessage]);
 
   return (
     <div className="w-[500px] h-[1000px] bg-white border border-gray-200 rounded-lg shadow-lg flex flex-col">
