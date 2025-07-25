@@ -96,7 +96,21 @@ export default function SourcingChatbot() {
   };
 
   const handlePillClickEvent = (pillText: string, response: BotResponse) => {
-    const message = handlePillClick(pillText, response);
+    // Immediately deactivate pills in UI for instant feedback
+    setMessages(prev => prev.map(msg => {
+      if (msg.role === 'assistant' && msg.content === response) {
+        return {
+          ...msg,
+          content: {
+            ...msg.content as BotResponse,
+            pillsActive: false
+          }
+        };
+      }
+      return msg;
+    }));
+
+    const message = handlePillClick(pillText);
     sendMessage(message);
   };
 
@@ -163,7 +177,7 @@ export default function SourcingChatbot() {
             )}
             
             {/* Pills for bot responses */}
-            {msg.role === 'assistant' && typeof msg.content === 'object' && 'type' in msg.content && (msg.content.type === 'pills' || msg.content.type === 'card') && (
+            {msg.role === 'assistant' && typeof msg.content === 'object' && 'type' in msg.content && (msg.content.type === 'pills' || msg.content.type === 'card') && msg.content.pillsActive !== false && (
               <div className="flex flex-wrap gap-2 mt-3 ml-11">
                 {msg.content.pills.map((pill: string, i: number) => (
                   <button

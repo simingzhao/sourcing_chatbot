@@ -1,9 +1,10 @@
-import { BotResponse, PillResponse, CardResponse } from './types';
+import React from 'react';
+import { BotResponse, CardResponse } from './types';
 
 /**
  * Handles pill click interactions by converting them to user messages
  */
-export function handlePillClick(pillText: string, response: BotResponse): string {
+export function handlePillClick(pillText: string): string {
   // Special handling for Edit/Submit buttons
   if (pillText === 'Edit') {
     return 'Edit';
@@ -32,10 +33,16 @@ export function formatResponseForDisplay(response: BotResponse): {
   mainContent: string;
   interactive?: {
     type: 'pills' | 'card';
-    data: any;
+    data: string[] | { summary: string[]; attachments: { url: string; type: string; name: string | null }[] | null; actions: string[] };
   };
 } {
-  const result: any = {
+  const result: {
+    mainContent: string;
+    interactive?: {
+      type: 'pills' | 'card';
+      data: string[] | { summary: string[]; attachments: { url: string; type: string; name: string | null }[] | null; actions: string[] };
+    };
+  } = {
     mainContent: response.content
   };
   
@@ -108,6 +115,36 @@ export function validateUserInput(input: {
 }
 
 /**
+ * Determines if pills should be shown for a bot response
+ */
+export function shouldShowPills(response: BotResponse): boolean {
+  return (response.type === 'pills' || response.type === 'card') && 
+         response.pillsActive !== false;
+}
+
+/**
+ * Creates a function to deactivate pills in a message list for immediate UI feedback
+ */
+export function createPillDeactivator<T extends { role: string; content: string | BotResponse }>(
+  setMessages: React.Dispatch<React.SetStateAction<T[]>>
+) {
+  return (targetResponse: BotResponse) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.role === 'assistant' && msg.content === targetResponse) {
+        return {
+          ...msg,
+          content: {
+            ...msg.content as BotResponse,
+            pillsActive: false
+          }
+        };
+      }
+      return msg;
+    }));
+  };
+}
+
+/**
  * Extracts requirement data from a card response
  */
 export function extractRequirementsFromCard(response: CardResponse): {
@@ -119,7 +156,15 @@ export function extractRequirementsFromCard(response: CardResponse): {
   shipping?: string;
   raw: string[];
 } {
-  const requirements: any = {
+  const requirements: {
+    product?: string;
+    quantity?: string;
+    customization?: string[];
+    leadTime?: string;
+    incoterms?: string;
+    shipping?: string;
+    raw: string[];
+  } = {
     raw: response.card.summary
   };
   

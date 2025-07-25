@@ -21,7 +21,8 @@ export const TextResponseSchema = z.object({
 export const PillResponseSchema = z.object({
   type: z.literal("pills"),
   content: z.string(),
-  pills: z.array(z.string())
+  pills: z.array(z.string()),
+  pillsActive: z.boolean().optional().default(true)
 });
 
 export const CardResponseSchema = z.object({
@@ -35,7 +36,8 @@ export const CardResponseSchema = z.object({
       name: z.string().nullable()
     })).nullable()
   }),
-  pills: z.array(z.enum(["Edit", "Submit"]))
+  pills: z.array(z.enum(["Edit", "Submit"])),
+  pillsActive: z.boolean().optional().default(true)
 });
 
 // Union type for all bot responses

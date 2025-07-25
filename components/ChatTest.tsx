@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { BotResponse } from '@/lib/types';
 import { handlePillClick, validateUserInput } from '@/lib/chat-utils';
-import { processUploadedFiles, validateFile } from '@/lib/file-utils';
+import { processUploadedFiles } from '@/lib/file-utils';
 
 export default function ChatTest() {
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: any }>>([]);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string | BotResponse }>>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversationId] = useState('test-' + Date.now());
-  const [uploadedFiles, setUploadedFiles] = useState<{ images: string[]; files: any[] }>({ images: [], files: [] });
+  const [uploadedFiles, setUploadedFiles] = useState<{ images: string[]; files: { name: string; content: string; type: string }[] }>({ images: [], files: [] });
 
   const sendMessage = async (message: string) => {
     // Validate input
@@ -80,7 +80,21 @@ export default function ChatTest() {
   };
 
   const handlePillClickEvent = (pillText: string, response: BotResponse) => {
-    const message = handlePillClick(pillText, response);
+    // Immediately deactivate pills in UI for instant feedback
+    setMessages(prev => prev.map(msg => {
+      if (msg.role === 'assistant' && msg.content === response) {
+        return {
+          ...msg,
+          content: {
+            ...msg.content as BotResponse,
+            pillsActive: false
+          }
+        };
+      }
+      return msg;
+    }));
+
+    const message = handlePillClick(pillText);
     sendMessage(message);
   };
 
@@ -106,17 +120,19 @@ export default function ChatTest() {
                   {msg.content.type === 'pills' && (
                     <div>
                       <div className="mb-2">{msg.content.content}</div>
-                      <div className="flex flex-wrap gap-2">
-                        {msg.content.pills.map((pill: string, i: number) => (
-                          <button
-                            key={i}
-                            onClick={() => handlePillClickEvent(pill, msg.content)}
-                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200"
-                          >
-                            {pill}
-                          </button>
-                        ))}
-                      </div>
+                      {msg.content.pillsActive !== false && (
+                        <div className="flex flex-wrap gap-2">
+                          {msg.content.pills.map((pill: string, i: number) => (
+                            <button
+                              key={i}
+                              onClick={() => handlePillClickEvent(pill, msg.content)}
+                              className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200"
+                            >
+                              {pill}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -135,21 +151,23 @@ export default function ChatTest() {
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2 mt-2">
-                        {msg.content.pills.map((pill: string, i: number) => (
-                          <button
-                            key={i}
-                            onClick={() => handlePillClickEvent(pill, msg.content)}
-                            className={`px-4 py-2 rounded ${
-                              pill === 'Submit' 
-                                ? 'bg-green-500 text-white hover:bg-green-600' 
-                                : 'bg-gray-200 hover:bg-gray-300'
-                            }`}
-                          >
-                            {pill}
-                          </button>
-                        ))}
-                      </div>
+                      {msg.content.pillsActive !== false && (
+                        <div className="flex gap-2 mt-2">
+                          {msg.content.pills.map((pill: string, i: number) => (
+                            <button
+                              key={i}
+                              onClick={() => handlePillClickEvent(pill, msg.content)}
+                              className={`px-4 py-2 rounded ${
+                                pill === 'Submit' 
+                                  ? 'bg-green-500 text-white hover:bg-green-600' 
+                                  : 'bg-gray-200 hover:bg-gray-300'
+                              }`}
+                            >
+                              {pill}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

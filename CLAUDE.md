@@ -31,8 +31,18 @@ npm run build
 # Start production server
 npm run start
 
-# Run linting
+# Run linting (required before commits)
 npm run lint
+
+# Testing (test at http://localhost:3000)
+npm run dev
+```
+
+## Environment Setup
+
+Create `.env.local` with:
+```
+OPENAI_API_KEY=your_api_key_here
 ```
 
 ## Architecture
@@ -45,9 +55,16 @@ npm run lint
 
 ### Key Directories
 - `/app` - Next.js App Router pages and layouts
-- `/app/api` - API routes for chatbot backend
+- `/app/api/chat` - Main chatbot API endpoint (POST/GET)
 - `/components` - React components (shadcn/ui based)
-- `/lib` - Utilities and shared logic
+- `/lib` - Core business logic and utilities
+
+### Key Architecture Patterns
+- **OpenAI Structured Output**: All bot responses use Zod schemas for type safety
+- **In-memory conversations**: Simple Map-based storage (replace with Redis/DB for production)
+- **Multimodal processing**: Handles text, images (base64), and files (TXT/CSV)
+- **Discriminated unions**: Type-safe message types (text/pills/card responses)
+- **Conversation state management**: Tracks stages and collected sourcing information
 
 ### Path Aliases
 - `@/*` maps to root directory (configured in tsconfig.json)
@@ -108,11 +125,18 @@ npm run lint
 - **POST /api/chat**: Handles chat messages with multimodal support
 - **GET /api/chat**: Retrieves conversation history
 
-### Key Files Created
-- `/lib/types.ts` - TypeScript types and Zod schemas
-- `/lib/openai-schemas.ts` - OpenAI Structured Output schemas
-- `/lib/system-prompt.ts` - Adaptive conversation prompts
-- `/lib/chat-utils.ts` - Interaction handling utilities
-- `/lib/file-utils.ts` - File/image processing
-- `/app/api/chat/route.ts` - Main API endpoint
-- `/components/ChatTest.tsx` - Test UI component
+### Key Files and Their Purpose
+- `/lib/types.ts` - Core TypeScript types and Zod schemas for message validation
+- `/lib/openai-schemas.ts` - OpenAI Structured Output response schemas
+- `/lib/system-prompt.ts` - Adaptive prompts that control conversation flow
+- `/lib/chat-utils.ts` - Pill click handlers and conversation utilities
+- `/lib/file-utils.ts` - Multimodal file/image processing
+- `/app/api/chat/route.ts` - Main API endpoint handling chat logic
+- `/components/ChatTest.tsx` - Test UI at root path for development
+
+### Critical Implementation Details
+- **Message flow**: User input → OpenAI Structured Output → Type-safe responses
+- **Pill interactions**: Click handlers deactivate previous pills and trigger new responses
+- **Conversation memory**: Persisted in Map with conversationId as key
+- **File processing**: Base64 encoding for images, text extraction for TXT/CSV
+- **Response types**: Text (simple), Pills (clickable options), Card (summary with Edit/Submit)

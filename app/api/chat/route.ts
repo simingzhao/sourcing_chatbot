@@ -32,6 +32,19 @@ export async function POST(req: NextRequest) {
     // Get or create conversation history
     let conversationHistory = conversations.get(conversationId) || [];
 
+    // Deactivate pills from the most recent bot message with pills before adding user response
+    if (conversationHistory.length > 0) {
+      for (let i = conversationHistory.length - 1; i >= 0; i--) {
+        const msg = conversationHistory[i];
+        if (msg.role === 'assistant' && 'type' in msg && (msg.type === 'pills' || msg.type === 'card')) {
+          if ('pillsActive' in msg && msg.pillsActive !== false) {
+            (msg as BotResponse & { pillsActive?: boolean }).pillsActive = false;
+            break; // Only deactivate the most recent message with pills
+          }
+        }
+      }
+    }
+
     // Add user message to history
     const userMessage: ConversationMessage = {
       role: 'user',
